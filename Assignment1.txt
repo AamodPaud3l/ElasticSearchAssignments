@@ -1,0 +1,92 @@
+#Assignment 1
+
+PUT hiking
+
+#idk if this thing PUT hiking{} is necessary
+PUT hiking
+{ 
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "hiked_on": {
+          "type": "date",
+          "format": "yyyy-MM-dd"
+        },
+        "coordinator": {
+          "type": "string"
+        },
+        "total_students": {
+          "type": "integer"
+        },
+        "cost": {
+          "type": "float"
+        },
+        "bus_booked": {
+          "type": "boolean"
+        },
+        "checklist": {
+          "type": "array"
+        }
+      }
+    }
+  }
+}
+
+PUT hiking/_doc/1
+{
+  "hiked_on": "2019-02-01",
+  "coordinator": "Aamod Paudel",
+  "total_students": 12,
+  "cost": 5100.50,
+  "bus_booked": "True",
+  "checklist": ["Water bottle","First Aid", "Walking Stick", "Foods"],
+  "test_field": "idk...sth"
+}
+
+GET hiking/_doc/1
+
+POST hiking/_doc/1/_update
+{
+  "doc": {
+    "no_of_vegetarians": 4,
+    "no_of_non-vegetarians": 8
+  }
+}
+
+POST hiking/_doc/1/_update
+{
+  "script": {
+    "lang": "painless",
+    "source": """
+  ctx._source.girls = 5;
+  ctx._source.boys = 7;
+  ctx._source.remove('no_of_vegetarians');
+  ctx._source.remove('no_of_non-vegetarians');
+"""
+  }
+}
+
+POST hiking/_doc/1/_update
+{
+  "script": {
+    "lang": "painless",
+    "source": "ctx._source.cost-=params.subtractor",
+    "params": {
+      "subtractor": 560
+    }
+  }
+}
+
+POST hiking/_doc/1/_update
+{
+  "script": {
+    "lang": "painless",
+    "source": """
+    for(int i = 0; i < 3; i++){
+      if(!ctx._source.checklist.contains("raincoat")){
+        ctx._source.checklist.add("raincoat")
+      }
+    }
+"""
+  }
+}
