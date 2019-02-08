@@ -1,0 +1,509 @@
+#Class 2
+
+PUT hiking/_doc/2
+{
+  "hiked_on": "2019-02-03",
+  "coordinator": "Ram Prasad",
+  "total_students": 15,
+  "cost": 3100.50,
+  "bus_booked": "True",
+  "checklist": ["Water bottle","First Aid", "Walk Stick", "Foods", "Sunscreen"]
+}
+
+GET hiking/_doc/_search
+
+#yet to complete _mget
+POST hiking/_doc/_mget 
+{
+  "script": {
+    "_index": "hiking",
+    "_id": 1
+  }
+}
+
+POST hiking/_doc/_bulk
+{"index":{"_id":3}}
+{"hiked_on":"2019-02-03","coordinator":"Ram Prasad","total_students":20}
+{"index":{"_id":4}}
+{"hiked_on":"2019-02-02","coordinator":"Hari Prasad","total_students":10}
+{"update":{"_id":1}}
+{"doc":{"test_field":"Just changed it!"}}
+
+GET hiking/_doc/_mapping
+
+PUT hiking/_mapping/_doc
+{"dynamic":false}
+
+PUT hiking/_doc/1
+{"testfield":"testvalue"}
+
+PUT hiking/_doc/1
+{
+  "testdatafield": "01-10-1999"
+}
+
+PUT hiking/_mapping/_doc
+{
+  "dynamic": true,
+  "dynamic_date_formats": ["MM-DD-YYYY"]
+}
+
+PUT hiking1
+{
+  "mappings": {
+    "_doc": {
+      "dynamic": false,
+      "properties": {
+        "coordinator": {
+          "type": "text"
+        },
+        "coordinator_phn": {
+          "type": "keyword"
+        },
+        "budget": {
+          "type": "scaled_float",
+          "scaling_factor": 100
+        },
+        "total_students": {
+          "type": "byte"
+        },
+        "hiked_on": {
+          "type": "date",
+          "format": "MM-dd-YYYY"
+        },
+        "bus_taken": {
+          "type": "boolean"
+        },
+        "logo": {
+          "type": "binary"
+        },
+        "distance_covered": {
+          "type": "integer_range"
+        },
+        "time_taken": {
+          "type": "date_range",
+          "format": "MM-dd-YYYY HH:mm:ss"
+        },
+        "required_items": {
+          "type": "text"
+        }
+      }
+    }
+  }
+}
+GET hiking1/_doc/_mapping
+
+#Searching
+GET product/_doc/_search?q=*
+
+GET product/_search
+{
+  "explain": true,
+  "query": {
+    "term": {
+      "name": "sea"
+    }
+  }
+}
+
+#------------------------------------------------------------
+#Assignment 2
+DELETE surfing
+PUT surfing
+{
+  "mappings": {
+    "_doc": {
+      "dynamic": false,
+      "properties": {
+        "coordinator": {
+          "type": "text"
+        },
+        "coordinator_phn": {
+          "type": "keyword"
+        },
+        "budget": {
+          "type": "long"
+        },
+        "roundtrip_distance": {
+          "type": "double"
+        },
+        "bus_taken": {
+          "type": "boolean"
+        },
+        "location": {
+          "type": "geo_point"
+        },
+        "surfed_on": {
+          "type": "date",
+          "format": "yyyy/MM/dd || MM-dd-yyyy"
+        },
+        "distance_covered": {
+          "type": "integer_range"
+        },
+        "required_items": {
+          "type": "text"
+        },
+        "attendees": {
+          "type": "nested",
+          "properties": {
+            "name": {
+              "type": "text"
+            },
+            "batch": {
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+PUT surfing/_doc/1
+{
+  "coordinator": "Ram Prasad",
+  "coordinator_phn": "989898123",
+  "budget": 5000,
+  "roundtrip_distance": 780.154,
+  "bus_taken": true,
+  "location": {
+    "lat": 44.3,
+    "lon": 43.2
+  },
+  "surfed_on": "2019/02/08",
+  "distance_covered": {
+    "gt": 45,
+    "lt": 50
+  },
+  "required_items": [
+    "surf board",
+    "sun tan",
+    "sun screen",
+    "goggles"
+  ],
+  "attendees": [
+    {
+      "name": "Aamod Paudel",
+      "batch": 2020
+    },
+    {
+      "name": "Shyam Prasad",
+      "batch": 2021
+    }
+  ]
+}
+
+PUT surfing/_doc/2
+{
+  "coordinator": "Ram Kumar",
+  "coordinator_phn": "981712821",
+  "budget": 7000,
+  "roundtrip_distance": 1000.654,
+  "bus_taken": true,
+  "location": {
+    "lat": 47.3,
+    "lon": 43.2
+  },
+  "surfed_on": "2019/02/07",
+  "distance_covered": {
+    "gt": 60,
+    "lt": 70
+  },
+  "required_items": [
+    "surf board",
+    "sun tan",
+    "sun screen",
+    "goggles"
+  ],
+  "attendees": [
+    {
+      "name": "Shyam Kumar",
+      "batch": 2020
+    },
+    {
+      "name": "Ram Prasad",
+      "batch": 2021
+    }
+  ]
+}
+
+#changing bus_taken's value
+PUT surfing/_doc/3
+{
+  "coordinator": "Ram Prasad",
+  "coordinator_phn": "989898123",
+  "budget": 5000,
+  "roundtrip_distance": 780.154,
+  "bus_taken": "Of Course!",
+  "location": {
+    "lat": 44.3,
+    "lon": 43.2
+  },
+  "surfed_on": "2019/02/08",
+  "distance_covered": {
+    "gt": 45,
+    "lt": 50
+  },
+  "required_items": [
+    "surf board",
+    "sun tan",
+    "sun screen",
+    "goggles"
+  ],
+  "attendees": [
+    {
+      "name": "Aamod Paudel",
+      "batch": 2020
+    },
+    {
+      "name": "Shyam Prasad",
+      "batch": 2021
+    }
+  ]
+}
+
+
+# curl -H "Content-type: application/json" -XPOST "http://localhost:9200/accounts/_doc/_bulk?pretty" --data-binary @accounts.json
+
+GET /accounts/_doc/_search?q=*
+
+GET /accounts/_doc/_search?q=age: [30 TO 70]
+
+GET /accounts/_doc/_search?q=gender:F AND age: [* TO 25]
+
+GET /accounts/_doc/_search?q=gender:M AND state:ME
+
+POST accounts/_update_by_query?conflicts=proceed
+{
+  "script": {
+    "source": """
+     ctx._source.expense_list=[];
+    """
+  }
+}
+
+POST accounts/_update_by_query?conflicts=proceed
+{
+  "query": {
+    "range": {
+      "age": {
+        "gte": "30",
+        "lte": "70"
+      }
+    }
+  },
+  "script": {
+    "source": """
+    if (ctx._source.containsKey('expense_list')){
+      if (!ctx._source.expense_list.contains(params.valstd)){
+        ctx._source.expense_list.add(params.valstd);
+      }
+    }else{
+      ctx._source.expense_list=[];
+    }
+    """,
+    "params": {
+      "valstd": "student_loan"
+    }
+  }
+}
+
+POST accounts/_update_by_query?conflicts=proceed
+{
+  "query": {
+    "range": {
+      "age": {
+        "gte": "25",
+        "lte": "50"
+      }
+    }
+  },
+  "script": {
+    "source": """
+    if (ctx._source.containsKey('expense_list')){
+      if (!ctx._source.expense_list.contains(params.valcar)){
+        ctx._source.expense_list.add(params.valcar);
+      }
+      if (!ctx._source.expense_list.contains(params.valhouse)){
+        ctx._source.expense_list.add(params.valhouse);
+      }
+    }else{
+      ctx._source.expense_list=[];
+    }
+    """,
+    "params": {
+      "valcar": "car_loan",
+      "valhouse": "house_loan"
+    }
+  }
+}
+
+POST accounts/_update_by_query?conflicts=proceed
+{
+  "query": {
+    "range": {
+      "balance": {
+        "gte": "40000"
+      }
+    }
+  },
+  "script": {
+    "source": """
+    if (ctx._source.containsKey('expense_list')){
+      if (!ctx._source.expense_list.contains(params.val)){
+        ctx._source.expense_list.add(params.val);
+      }
+    }else{
+      ctx._source.expense_list=[];
+      
+    }
+    """,
+    "params": {
+      "val": "recreation"
+    }
+  }
+}
+
+POST accounts/_update_by_query?conflicts=proceed
+{
+  "query": {
+    "term": {
+      "state": {
+        "value": "PA"
+      }
+    }
+  },
+  "script": {
+    "source": "ctx._source.balance-=2000"
+  }
+}
+
+POST accounts/_delete_by_query?conflicts=proceed
+{
+  "query": {
+    "match": {
+      "state": "KY"
+    }
+  }
+}
+
+GET accounts/_search
+{
+  "query": {
+    "term": {
+      "age": {
+        "value": 39
+      }
+    }
+  }
+}
+
+GET accounts/_search
+{
+  "query": {
+    "range": {
+      "age": {
+        "gte": 30,
+        "lte": 35
+      }
+    }
+  }
+}
+
+GET accounts/_search
+{
+  "query": {
+    "prefix": {
+      "lastname": "b"
+    }
+  }
+}
+
+GET accounts/_search
+{
+  "query": {
+    "wildcard": {
+      "lastname": "b*r"
+    }
+  }
+}
+
+PUT college
+{
+  "mappings": {
+    "_doc": {
+      "dynamic": false,
+      "properties": {
+        "batch": {
+          "type": "integer"
+        },
+        "students": {
+          "type": "nested",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "text"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+PUT college/_doc/1
+{
+  "batch":2020,
+  "stuents":[{"id":601,"name":"Ajay Banstola"},
+  {"id":602,"name":"Nabin Koirala"},
+  {"id":603,"name": "Aamod Paudel"}
+  ]
+}
+
+PUT workshop
+{
+  "mappings": {
+    "_doc": {
+      "dynamic": false,
+      "properties": {
+        "students_id": {
+          "type": "integer"
+        },
+        "workshop_about": {
+          "type": "text"
+        },
+        "enrolled_year": {
+          "type": "date"
+        }
+      }
+    }
+  }
+}
+
+POST workshop/_doc/_bulk
+{"index":{"_id":1}}
+{"students_id":[521,602,523,633,535],"workshop_about":"elastic search","enrolled_year":"2018"}
+{"index":{"_id":2}}
+{"students_id":[510,601,534,613,532],"workshop_about":"IT and networking","enrolled_year":"2016"}
+{"index":{"_id":3}}
+{"students_id":[501,502,534,522,532],"workshop_about":"Software Testing","enrolled_year":"2017"}
+{"index":{"_id":4}}
+{"students_id":[520,522,524,511,523],"workshop_about":"Python Programming Fundamentals","enrolled_year":"2017"}
+{"index":{"_id":5}}
+{"students_id":[620,614,603,643,633],"workshop_about":"Public Speaking","enrolled_year":"2016"}
+
+GET workshop/_search
+{
+    "query":{
+        "terms":{
+            "students_id":{
+                "index":"college",
+                "type":"_doc",
+                "id": "1",
+                "path":"students_id"
+            }
+        }
+    }
+}
