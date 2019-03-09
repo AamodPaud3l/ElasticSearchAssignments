@@ -769,3 +769,56 @@ PUT products_bulk
     }
   }
 }
+
+# curl -H "Content-type: application/json" -XPOST "http:///localhost:9200/products_bulk/_doc/_bulk?pretty" --data-binary @products_bulk.json"
+
+GET products_bulk/_search
+GET products_bulk/_search
+{
+  "query": {
+    "exists": {
+      "field": "comment"
+    }
+  }
+}
+
+GET products_bulk/_search
+{
+  "query": {
+    "fuzzy": {
+      "name": {
+        "value": "ac",
+        "fuzziness": 2, 
+        "max_expansions":1
+      }
+    }
+  }
+}
+
+GET products_bulk/_search
+{
+  "query": {
+    "match": {
+      "comment": {
+        "query": "quality good but",
+        "lenient": "true",
+        "minimum_should_match": 2
+      }
+    }
+  }
+}
+
+GET products_bulk/_search
+{
+  "query": {
+    "bool": {
+      "filter": {
+        "range": {
+          "stock": {
+            "gte": 100
+          }
+        }
+      }
+    }
+  }
+}
