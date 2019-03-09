@@ -1,0 +1,771 @@
+#Final Assignemnt 4
+
+DELETE recipes
+PUT recipes
+{
+  "settings": {
+    "index": {
+      "analysis": {
+        "analyzer": {
+          "new_recipe_analyzer": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+              "lowercase",
+              "recipe_stop",
+              "recipe_synonyms"
+            ]
+          }
+        },
+        "filter": {
+          "recipe_stop": {
+            "type": "stop",
+            "stopwords": "_english_"
+          },
+          "recipe_synonyms": {
+            "type": "synonym",
+            "synonyms_path": "analysis/synonyms.txt"
+          }
+        }
+      }
+    }
+  },
+  "mappings": {
+    "_doc": {
+      "dynamic": false,
+      "properties": {
+        "title": {
+          "type": "text"
+        },
+        "description": {
+          "type": "text",
+          "analyzer": "new_recipe_analyzer"
+        },
+        "preparation_time_minutes": {
+          "type": "integer"
+        },
+        "servings": {
+          "type": "nested",
+          "properties": {
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            }
+          }
+        },
+        "steps": {
+          "type": "text",
+          "analyzer": "new_recipe_analyzer"
+        },
+        "ingredients": {
+          "type": "nested",
+          "properties": {
+            "name": {
+              "type": "keyword"
+            },
+            "quantity": {
+              "type": "keyword"
+            }
+          }
+        },
+        "created": {
+          "type": "date",
+          "format": "yyyy/MM/DD"
+        },
+        "ratings": {
+          "type": "double"
+        }
+      }
+    }
+  }
+}
+
+#bulk insert recipe.json
+#curl -H "Content-Type: application/json" -XPOST "http://localhost:9200/recipes/_doc/_bulk?pretty" --data-binary @recipe.json
+
+#Min-max servings difference 1-3
+POST recipes/_update_by_query?conflicts=proceed
+{
+  "query": {
+    "range": {
+      "preparation_time_minutes": {
+        "lte": 15
+      }
+    }
+  },
+  "script": {
+    "source": """
+    if ((ctx._source.servings.max - ctx._source.servings.min) > 3){
+      ctx._source.servings.max = ctx._source.servings.min+3
+    }
+  """,
+  "params": {
+    "val": "Per Choice"
+  }
+  }
+}
+
+#4
+GET recipes/_search
+POST recipes/_update_by_query?conflicts=proceed
+{
+  "query": {
+    "nested": {
+      "path": "ingredients",
+      "query": {
+        "bool": {
+          "must_not": [
+            {
+              "exists": {
+                "field": "ingredients.quantity"
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "script": "def updated = false; ctx._source.ingredient?.each { obj -> if (!obj.quantity) { obj.quantity = params[val]; updated = true } }; if (!updated) { ctx._source.ingredient = ((ctx._source.ingredient ?: []) + params[val])}",
+  "params": {
+    "val": "Per Choice"
+  }
+}
+
+
+
+#Deleting unrated documents
+POST recipes/_delete_by_query?conflicts=proceed
+{
+  "query": {
+    "term": {
+      "ratings": "NULL"
+    }
+  }
+}
+
+#Recipes with egg
+GET recipes/_search
+{
+  "_source": [
+    "title",
+    "ratings",
+    "steps"
+  ],
+  "query": {
+    "nested": {
+      "path": "ingredients",
+      "query": {
+        "match": {
+          "ingredients.name": "egg"
+        }
+      }
+    }
+  },
+  "script_fields": {
+    "number_of_steps": {
+      "script": {
+        "lang": "painless",
+        "source": "params['_source']['steps'].size()"
+      }
+    }
+  },
+  "sort": [
+    {
+      "ratings": {
+        "mode": "avg"
+      }
+    }
+  ]
+}
+
+#metric aggregation
+GET recipes/_doc/_search
+{
+  "size": 0,
+  "aggs": {
+    "avg_amount": {
+      "avg": {
+        "field": "ratings"
+      }
+    }
+  }
+}
+
+GET recipes/_search
+{
+  "size": 0,
+  "aggs": {
+    "oldest recipe": {
+      "min": {
+        "field": "created"
+      }
+    }
+  }
+}
+
+GET recipes/_search
+{
+  "size": 0,
+  "aggs": {
+    "servings": {
+      "max": {
+        "field": "created"
+      }
+    }
+  }
+}
+
+#bucket aggregation
+GET recipes/_doc/_search
+{
+  "size": 0,
+  "aggs": {
+    "status": {
+      "terms": {
+        "field": "preparation_time_minutes",
+        "missing":"10",
+        "min_doc_count":0
+      }
+    }
+  }
+}
+
+GET recipes/_doc/_search
+{
+  "size": 0,
+  "aggs": {
+    "status": {
+      "terms": {
+        "field": "created",
+        "size": 3,
+        "show_term_doc_count_error": true,
+        "order":{"_key":"asc"}
+      }
+    }
+  }
+}
+
+GET recipes/_search
+{
+  "size": 0,
+  "aggs": {
+    "age_range": {
+      "range": {
+        "field": "ratings",
+        "ranges": [
+          {
+            "to": 2
+          },
+          {
+            "from": 2,
+            "to": 4
+          },
+          {
+            "from":4
+          }
+        ]
+      }
+    }
+  }
+}
+
+GET recipes/_search
+{"size":0,
+  "aggs": {
+    "created_range": {
+      "date_range": {
+        "field": "created",
+        "format": "MMMM",
+        "ranges": [
+          {
+            "to": "now-100M/M"
+          },
+          {
+            "from": "now-100M/M"
+          }
+        ]
+      }
+    }
+  }
+}
+
+GET recipes/_search
+{
+  "size": 0,
+  "aggs": {
+    "created_range": {
+      "date_range": {
+        "field": "created",
+        "format": "yyyy/mm/dd",
+        "ranges": [
+          {
+            "to": "2005/01/01"
+          },
+          {
+            "from": "2000/01/01",
+            "to": "2014/01/01"
+          },
+          {
+            "from":"2010/01/01"
+          }
+        ]
+      }
+    }
+  }
+}
+
+#sub aggregation
+GET recipes/_doc/_search
+{
+  "size": 0,
+  "aggs": {
+    "preparation_time_range": {
+      "range": {
+        "script": {
+          "source": "doc.preparation_time_minutes.value"
+        },
+        "keyed": true,
+        "ranges": [
+          {
+            "key": "appetizers",
+            "to": 15
+          },
+          {
+            "key": "entree",
+            "from": 15,
+            "to": 30
+          },
+          {
+            "key": "heavy protein",
+            "from": 30
+          }
+        ]
+      },
+      "aggs": {
+        "statistics": {
+          "stats": {
+            "script": {
+              "source": "doc.preparation_time_minutes.value"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+GET recipe/_doc/_search
+{
+  "size": 0,
+  "aggs": {
+    "preparation_time_minutes": {
+      "terms": {
+        "field": "created"
+      },
+      "aggs": {
+        "created": {
+          "terms": {
+            "field": "ratings"
+          }
+        }
+      }
+    }
+  }
+}
+
+#Compound bool query search
+GET recipes/_doc/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match_phrase": {
+            "title": {
+              "query": "sauce",
+              "slop": 1
+            }
+          }
+        },
+        {
+          "fuzzy": {
+            "description": {
+              "value": "leon",
+              "fuzziness": 2
+            }
+          }
+        }
+      ],
+      "filter": [
+        {
+          "range": {
+            "created": {
+              "lte": "2019/01/01"
+            }
+          }
+        },
+        {
+          "query_string": {
+            "default_field": "description",
+            "query": "(mushrooms) or (sprouts)"
+          }
+        }
+      ],
+      "should": [
+        {
+          "range": {
+            "ratings": {
+              "gte": 4
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+#Cut-off frequency
+GET recipes/_search
+{
+  "query": {
+    "match": {
+      "steps": {
+        "query": "pinch of salt",
+        "cutoff_frequency": 1
+      }
+    }
+  }
+}
+
+GET recipes/_search
+{
+  "query": {
+    "match": {
+      "steps": {
+        "query": "red pepper",
+        "cutoff_frequency": 0.001
+      }
+    }
+  }
+}
+
+GET recipes/_search
+{
+  "query": {
+    "common": {
+      "steps": {
+        "query": "macaroni and cheese",
+        "cutoff_frequency": 0.001,
+        "low_freq_operator": "and"
+      }
+    }
+  }
+}
+
+GET recipes/_search
+{
+  "query": {
+    "common": {
+      "steps": {
+        "query": "creamy hot sauce",
+        "cutoff_frequency": 0.005,
+        "high_freq_operator": "or"
+      }
+    }
+  }
+}
+
+#10
+#create
+DELETE items
+PUT items
+{
+  "mappings": {
+    "_doc": {
+      "dynamic": false,
+      "properties": {
+        "item_id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "text"
+        },
+        "stock": {
+          "type": "integer"
+        },
+        "vendor": {
+          "properties": {
+            "name": {
+              "type": "text"
+            },
+            "contact": {
+              "type": "keyword"
+            },
+            "address": {
+              "type": "geo_point"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+#Bulk insert
+PUT items/_doc/_bulk
+{"index":{"_id":1}}
+{"item_id":1,"name":"Natural White Day Cream","stock":100,"vendor":{"name":"Olay","contact":"6856668997","address":{"lat":78.26,"lon":89.36}}}
+{"index":{"_id":2}}
+{"item_id":2,"name":"Fairness Cream","stock":200,"vendor":{"name":"Fair & Lovely","contact":"6856668998","address":{"lat":87.54,"lon":43.13}}}
+{"index":{"_id":3}}
+{"item_id":3,"name":"Iron","stock":150,"vendor":{"name":"Phillips","contact":"8484255","address":{"lat":56.42,"lon":42.56}}}
+{"index":{"_id":4}}
+{"item_id":4,"name":"TV","stock":10,"vendor":{"name":"LG","contact":"4589623","address":{"lat":12.65,"lon":56.63}}}
+{"index":{"_id":5}}
+{"item_id":5,"name":"Cleaner","stock":30,"vendor":{"name":"Colin","contact":"8462313","address":{"lat":78.23,"lon":45.23}}}
+
+
+#Geo-bounding box and distance queries
+GET items/_search
+{
+  "query": {
+    "bool": {
+      "filter": {
+        "geo_bounding_box": {
+          "vendor.address": {
+            "top_left": {
+              "lat": 80,
+              "lon": 60
+            },
+            "bottom_right": {
+              "lat": 10,
+              "lon": 50
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+#Create index
+PUT category_items
+{
+  "mappings": {
+    "_doc": {
+      "dynamic": false,
+      "properties": {
+        "category": {
+          "type": "text"
+        },
+        "items": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}
+
+#Inserting items to categories
+PUT category_items/_doc/1
+{
+  "category":"cosmetic",
+  "items":[1,2]
+}
+
+PUT category_items/_doc/2
+{
+  "category":"household",
+  "items":[3,4,5]
+}
+
+#Cosmetic category
+GET items/_search
+{
+  "query": {
+    "terms": {
+      "item_id": {
+        "index": "category_items",
+        "type": "_doc",
+        "id": 1,
+        "path": "items"
+      }
+    }
+  }
+}
+
+#Creating filtered alias
+POST /_aliases
+{
+  "actions": [
+    {
+      "add": {
+        "index": "orders",
+        "alias": "orders_fulfilled",
+        "filter": {
+          "bool": {
+            "must": [
+              {
+                "query_string": {
+                  "default_field": "status",
+                  "query": "(processed) or (completed)"
+                }
+              },
+              {
+                "query_string": {
+                  "default_field": "sales_channel",
+                  "query": "(phone) and (app)"
+                }
+              },
+              {
+                "range": {
+                  "total_amount": {
+                    "gte": 100
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
+
+#Query on alias
+#Term Query 
+GET orders_fulfilled/_search
+{
+  "query": {
+    "term": {
+      "status": {
+      "value": "processed"
+      }
+    }
+  }
+}
+
+# Range Query
+GET orders_fulfilled/_search
+{
+  "query": {
+    "range": {
+      "total_amount": {
+        "gte": 100,
+        "lte": 200
+      }
+    }
+  }
+}
+
+# Prefix Query
+GET orders_fulfilled/_search
+{
+  "query": {
+    "prefix": {
+      "salesman.name": "shea"
+    }
+  }
+}
+
+# Wildcard Queries
+GET orders_fulfilled/_search
+{
+  "query": {
+    "wildcard": {
+      "salesman.name": "s*a"
+    }
+  }
+}
+
+# Match Query
+GET orders_fulfilled/_search
+{
+  "query": {
+    "match": {
+      "salesman.id": "26"
+    }
+  }
+}
+
+
+# Fuzzy Match
+GET orders_fulfilled/_search
+{
+  "query": {
+    "match": {
+      "salesman.name": {
+        "query": "shea",
+        "fuzziness": 2
+      }
+    }
+  }
+}
+
+####
+DELETE products_bulk
+PUT products_bulk
+{
+  "settings": {
+    "index": {
+      "analysis": {
+        "analyzer": {
+          "product_analyzer": {
+            "type": "custom",
+            "tokenizer": "standard",
+            "filter": [
+              "lowercase",
+              "my_stop",
+              "my_synonyms"
+            ]
+          }
+        },
+        "filter": {
+          "my_stop": {
+            "type": "stop",
+            "stopwords": "_english_"
+          },
+          "my_synonyms": {
+            "type": "synonym",
+            "synonyms_path": "analysis/synonyms.txt"
+          }
+        }
+      }
+    }
+  },
+  "mappings": {
+    "_doc": {
+      "dynamic": false,
+      "properties": {
+        "item_id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "text"
+        },
+        "stock": {
+          "type": "integer"
+        },
+        "vendor": {
+          "properties": {
+            "name": {
+              "type": "text"
+            },
+            "contact": {
+              "type": "keyword"
+            },
+            "address": {
+              "type": "geo_point"
+            }
+          }
+        },
+        "comment": {
+          "type": "text",
+          "analyzer": "product_analyzer"
+        }
+      }
+    }
+  }
+}
