@@ -1,0 +1,25 @@
+{"index":{"_id":1}}
+{"item_id":1,"name":"Natural White Day Cream","stock":100,"vendor":{"name":"Olay","contact":"6856668997","address":{"lat":78.26,"lon":89.36}},"comment":"Great and durable."}
+
+{"index":{"_id":2}}
+{"item_id":2,"name":"Fairness Cream","stock":200,"vendor":{"name":"Fair & Lovely","contact":"6856668998","address":{"lat":87.54,"lon":43.13}},"comment":"Looks sweet and is cheap."}
+
+{"index":{"_id":3}}
+{"item_id":3,"name":"Iron","stock":150,"vendor":{"name":"Phillips","contact":"8484255","address":{"lat":56.42,"lon":42.56}},"comment":"Durable and good quality."}
+
+{"index":{"_id":4}}
+{"item_id":4,"name":"TV","stock":10,"vendor":{"name":"LG","contact":"4589623","address":{"lat":12.65,"lon":56.63}},"comment":"Looks good. Has many features."}
+
+
+{"index":{"_id":5}}
+{"item_id":5,"name":"Cleaner","stock":30,"vendor":{"name":"Colin","contact":"8462313","address":{"lat":78.23,"lon":45.23}},"comment":"Cheap and good quality."}
+{"index":{"_id":6}}
+{"item_id":6,"name":"Washer","stock":50,"vendor":{"name":"Rin","contact":"846212313","address":{"lat":78.23,"lon":40.23}},"comment":"Cheap but not good."}
+{"index":{"_id":7}}
+{"item_id":7,"name":"Washing Machine","stock":42,"vendor":{"name":"Samsung","contact":"7882313","address":{"lat":38.23,"lon":45.23}},"comment":"Too expensive for its quality."}
+{"index":{"_id":8}}
+{"item_id":8,"name":"Laptop","stock":10,"vendor":{"name":"Dell","contact":"8422313","address":{"lat":58.23,"lon":45.13}},"comment":"Stylish and cheap."}
+{"index":{"_id":9}}
+{"item_id":9,"name":"Mouse","stock":115,"vendor":{"name":"Logitech","contact":"74633313","address":{"lat":70.13,"lon":45.93}},"comment":"Expensive but durable."}
+{"index":{"_id":10}}
+{"item_id":10,"name":"Study Table","stock":20,"vendor":{"name":"Sky Shop","contact":"846231312","address":{"lat":70.20,"lon":40.03}},"comment":"Durable and good quality."}
