@@ -45,7 +45,6 @@ PUT recipes
           "type": "integer"
         },
         "servings": {
-          "type": "nested",
           "properties": {
             "min": {
               "type": "integer"
@@ -86,7 +85,7 @@ PUT recipes
 #curl -H "Content-Type: application/json" -XPOST "http://localhost:9200/recipes/_doc/_bulk?pretty" --data-binary @recipe.json
 
 #Min-max servings difference 1-3
-POST recipes/_update_by_query?conflicts=proceed
+POST recipes/_update_by_query?
 {
   "query": {
     "range": {
@@ -96,19 +95,44 @@ POST recipes/_update_by_query?conflicts=proceed
     }
   },
   "script": {
+    "lang": "painless",
+    "params": {
+      "lower_limit": 1,
+      "upper_limit": 3
+    },
     "source": """
-    if ((ctx._source.servings.max - ctx._source.servings.min) > 3){
-      ctx._source.servings.max = ctx._source.servings.min+3
-    }
-  """,
-  "params": {
-    "val": "Per Choice"
-  }
+            int difference= ctx._source.servings.max - ctx._source.servings.min;
+            if (difference<params.lower_limit) {
+                ctx._source.servings.max+=params.lower_limit
+            }else if (difference>params.upper_limit){
+                ctx._source.servings.max -= (difference - params.upper_limit)
+            }
+"""
   }
 }
 
 #4
 GET recipes/_search
+#To find our how many such documents exist with missing quantity field
+GET recipes/_doc/_search
+{
+  "query": {
+    "nested":{
+      "path":"ingredients","inner_hits":{},
+      "query":{
+        "bool":{
+          "must_not":{
+            "exists":{
+              "field":"ingredients.quantity"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+#exists, so updating the 20 documents by adding 'Per Choice'
 POST recipes/_update_by_query?conflicts=proceed
 {
   "query": {
@@ -116,34 +140,41 @@ POST recipes/_update_by_query?conflicts=proceed
       "path": "ingredients",
       "query": {
         "bool": {
-          "must_not": [
-            {
-              "exists": {
-                "field": "ingredients.quantity"
-              }
+          "must_not": {
+            "exists": {
+              "field": "ingredients.quantity"
             }
-          ]
+          }
         }
       }
     }
   },
-  "script": "def updated = false; ctx._source.ingredient?.each { obj -> if (!obj.quantity) { obj.quantity = params[val]; updated = true } }; if (!updated) { ctx._source.ingredient = ((ctx._source.ingredient ?: []) + params[val])}",
-  "params": {
-    "val": "Per Choice"
+  "script": {
+    "source": """
+    int size=ctx._source.ingredients.size();
+    for (int i=0; i<size; i++){
+     if (!ctx._source.ingredients[i].containsKey('quantity')) {
+       ctx._source.ingredients[i].quantity='Per Choice'
+     }
+    }
+"""
   }
 }
 
-
-
 #Deleting unrated documents
-POST recipes/_delete_by_query?conflicts=proceed
+GET recipes/_doc/_search
 {
   "query": {
-    "term": {
-      "ratings": "NULL"
+    "bool": {
+      "must_not": {
+        "exists": {
+          "field": "ratings"
+        }
+      }
     }
   }
 }
+
 
 #Recipes with egg
 GET recipes/_search
@@ -384,7 +415,7 @@ GET recipes/_doc/_search
         {
           "match_phrase": {
             "title": {
-              "query": "sauce",
+              "query": "cream sauce",
               "slop": 1
             }
           }
@@ -819,6 +850,55 @@ GET products_bulk/_search
           }
         }
       }
+    }
+  }
+}
+
+GET products_bulk/_search?q=stock: [30 TO 50]
+
+GET products_bulk/_search
+{
+  "query": {
+    "wildcard": {
+        "name": "c*"
+    }
+  }
+}
+
+GET products_bulk/_search
+{
+  "query": {
+    "match": {
+      "comment":{
+       "query": "Good cheap"
+       , "cutoff_frequency": 0.001
+      }
+    }
+  }
+}
+
+GET products_bulk/_search
+{
+  "size": 0,
+  "aggs": {
+    "stats": {
+      "stats": {
+        "field": "stock"
+      }
+    }
+  }
+}
+
+GET products_bulk/_search
+{
+  "query": {
+    "match": {
+      "comment": "good cheap"
+    }
+  },
+  "highlight": {
+    "fields": {
+      "comment": {}
     }
   }
 }
